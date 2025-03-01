@@ -4,24 +4,24 @@ import com.example.demo.beans.KeyCloakBean;
 import com.example.demo.dto.SignUpRequest;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ProcessingException;
-import jakarta.ws.rs.client.Client;
-import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.*;
-import org.keycloak.representations.AccessToken;
+import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.idm.*;
 import org.keycloak.representations.idm.authorization.*;
 
 import org.springframework.beans.factory.annotation.Value;
+
+
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -82,11 +82,14 @@ public class KeyCloakServiceFinal {
         organization.setAttributes(Map.of());
 
         Response orgResponse = realmResource.organizations().create(organization);
+
         if (orgResponse.getStatus() != 201) {
             System.out.println(orgResponse.readEntity(String.class));
             return Map.of("error", "Failed to create organization");
         }
         String organizationId = orgResponse.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
+
+
 
         UsersResource usersResource = realmResource.users();
         String randomPassword = generateRandomPassword();
@@ -111,6 +114,7 @@ public class KeyCloakServiceFinal {
 
         String userId = userResponse.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
         realmResource.organizations().get(organizationId).members().addMember(userId);
+
 
 
         String clientUuid = realmResource.clients().findByClientId(adminClientId).get(0).getId();
@@ -166,9 +170,9 @@ public class KeyCloakServiceFinal {
     }*/
 
     // login into the client and check client roles
-    public static void test() {
+    public static void main(String argString[]) {
 
-//        CODE FOR ACCESS TOKEM
+//        CODE FOR ACCESS TOKEN
 
         Keycloak keycloak = KeycloakBuilder.builder()
                 .serverUrl("http://localhost:8080/")
@@ -192,7 +196,22 @@ public class KeyCloakServiceFinal {
         }
 
         try {
+
+//            get Organizationname by userUuid
+
+
+            RealmResource real = keycloak.realm("demo");
+            List<OrganizationRepresentation> organizations = real.organizations().members().getOrganizations(uuid);
+            organizations.get(0).getName();
+            organizations.get(0).getDomains();
+            System.out.println(organizations);
+
+//            get Token
+
             System.out.println(keycloak.tokenManager().grantToken());
+            AccessTokenResponse accessTokenResponse = keycloak.tokenManager().grantToken();
+
+
         } catch (BadRequestException e) {
             e.printStackTrace();
             System.out.println(e.getResponse().readEntity(String.class));
@@ -218,7 +237,7 @@ public class KeyCloakServiceFinal {
 
     }
 
-    public static void main(String[] args) {
+    public static void evaluate() {
 
 //        CODE FOR EVAULATE
 
@@ -233,6 +252,8 @@ public class KeyCloakServiceFinal {
         String userId = "2d7f42f2-443f-488c-8650-9c1e751a7989";
         String scope = "POST";
         String resourceName = "entity";
+
+        UserRepresentation userRepresentation = keycloak.realm("demo").users().get(userId).toRepresentation();
 
         ClientsResource clientsResource = keycloak.realm("demo").clients();
         String clientUUID = clientsResource.findByClientId("test").get(0).getId();
